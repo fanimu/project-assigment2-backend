@@ -47,11 +47,81 @@ class TaskRepository
 	}
 
 	/**
-	 * Untuk menyimpan task baik untuk membuat baru atau menyimpan dengan struktur bson secara bebas
+	 * Untuk menyimpan task baik untuk membuat baru atau menyimpan dengan struktur json secara bebas
 	 *  */
 	public function save(array $editedData)
 	{
 		$id = $this->tasks->save($editedData);
 		return $id;
+	}
+
+	public function delete(string $id)
+	{
+		$this->tasks->deleteQuery(['_id'=>$id]);
+		return $id;
+	}
+
+	public function updateAssign($taskId, $assigned){
+		$existingTask = $this->getById($taskId);
+
+        if (!$existingTask) {
+            return null;
+        }
+
+        $existingTask['assigned'] = $assigned;
+        $this->tasks->save($existingTask);
+
+        return $existingTask;
+	}
+
+	public function updateUnssign($taskId){
+		$existingTask = $this->getById($taskId);
+
+        if (!$existingTask) {
+            return null;
+        }
+
+        $existingTask['assigned'] = null;
+        $this->tasks->save($existingTask);
+
+        return $existingTask;
+	}
+
+	public function createSubtask($taskId, $subtask){
+		$existingTask = $this->getById($taskId);
+
+        if (!$existingTask) {
+            return null;
+        }
+
+        $subtasks = isset($existingTask['subtasks']) ? $existingTask['subtasks'] : [];
+        $subtask['_id'] = (string) new \MongoDB\BSON\ObjectId();
+        $subtasks[] = $subtask;
+
+        $existingTask['subtasks'] = $subtasks;
+        $this->tasks->save($existingTask);
+
+        return $existingTask;
+	}
+
+
+	public function deleteSubtask($taskId, $subtaskId){
+		$existingTask = $this->getById($taskId);
+
+        if (!$existingTask) {
+            return null;
+        }
+
+        $subtasks = isset($existingTask['subtasks']) ? $existingTask['subtasks'] : [];
+
+        // Pencarian dan penghapusan subtask
+        $subtasks = array_filter($subtasks, function($subtask) use ($subtaskId) {
+            return $subtask['_id'] != $subtaskId;
+        });
+
+        $existingTask['subtasks'] = array_values($subtasks);
+        $this->tasks->save($existingTask);
+
+        return $existingTask;
 	}
 }
